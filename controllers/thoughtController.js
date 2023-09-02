@@ -5,10 +5,11 @@ const Reaction = require('../models/Reaction');
 module.exports = {
     async getThoughts(req, res) {
         try {
-        const thoughts = await Thought.find();
-        res.json(thoughts);
+            const thoughts = await Thought.find();
+            res.json(thoughts);
         } catch (err) {
-        res.status(500).json(err);
+            console.log(err);
+            res.status(500).json(err);
         }
     },
 
@@ -77,12 +78,22 @@ module.exports = {
         }
     },
 
+    async getReactions(req, res) {
+        try {
+            const reactions = await Reaction.find();
+            res.json(reactions);
+
+        } catch (err) {
+            res.status(500).json(err);
+        }
+    },
+
     async createReaction(req,res) {
         try {
             const reaction = await Reaction.create(req.body);
             const thought = await Thought.findOneAndUpdate(
                 {_id: req.params.thoughtId}, 
-                {$addToSet: {reactions: reaction}},
+                {$addToSet: {reactions: reaction.reactionId}},
                 {new: true}
                 );
 
@@ -97,11 +108,22 @@ module.exports = {
 
     async removeReaction(req, res) {
         try {
-            const reaction = await Reaction.findOne({reactionId: req.params.reactionId});
-
-        } catch (err) {
+            const reaction = await Reaction.findOneAndRemove({ reactionId: req.params.reactionId });
+            const thought = await Thought.findOneAndUpdate(
+                {_id: req.params.thoughtId},
+                {$pull: {reactions: req.params.reactionId}},
+                {new: true}
+            )
+            if(!reaction) {
+                return res.status(404).json({message: 'No reaction found'});
+            }
+            if (!thought) {
+                return res.json({ message: 'Reaction not associated with a thought' });
+            }
+            res.json({message: 'Reaction deleted.'});
+            } catch(err) {
             res.status(500).json(err);
-        }
+            }
     }
 
 };
