@@ -37,12 +37,13 @@ module.exports = {
   async updateUser(req, res) {
     try {
       console.log(req.body);
-      const user = await User.findOne({ _id: req.params.userId });
-      console.log(user);
+      const user = await User.findOneAndUpdate({ _id: req.params.userId }, {$set: req.body}, {new: true});
 
       if (!user) {
         return res.status(404).json({ message: 'No user with that ID' });
       }
+      res.json(user);
+
     } catch(err) {
       res.status(500).json(err);
     }
@@ -68,6 +69,66 @@ module.exports = {
     } catch(err) {
       res.status(500).json(err);
     }
-  }
+  },
+
+  async getFriends(req, res) {
+    try {
+      const user = await User.findOne({_id: req.params.userId});
+
+      res.json(user.friends);
+
+
+    } catch(err) {
+      res.status(500).json(err);
+    }
+  },
+
+  async addFriend(req, res) {
+    try {
+      const user1 = await User.findOneAndUpdate(
+        { _id: req.params.userId },
+        { $addToSet: { friends: req.params.friendId } },
+        { new: true }
+      );
+      const user2 = await User.findOneAndUpdate(
+        { _id: req.params.friendId },
+        { $addToSet: { friends: req.params.userId } },
+        { new: true }
+      );
+
+      if (!user1 || !user2) {
+        return res.status(404).json({message: "User not found!"})
+      }
+
+      res.json({user1, user2});
+
+    } catch(err) {
+      res.status(500).json(err);
+    }
+  },
+
+  async removeFriend(req, res) {
+    try {
+      const user1 = await User.findOneAndUpdate(
+        { _id: req.params.userId },
+        { $pull: { friends: req.params.friendId } },
+        { new: true }
+      );
+      const user2 = await User.findOneAndUpdate(
+        { _id: req.params.friendId },
+        { $pull: { friends: req.params.userId } },
+        { new: true }
+      );
+
+      if (!user1 || !user2) {
+        return res.status(404).json({message: "User not found!"})
+      }
+
+      res.json({user1, user2});
+
+    } catch(err) {
+      res.status(500).json(err);
+    }
+  },
 
 };
